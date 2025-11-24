@@ -12,7 +12,6 @@ int main()
     // Window
     RenderWindow window(VideoMode(1920, 1080), "Chaos Game");
 
-    // For randomness
     srand(time(NULL));
 
     vector<Vector2f> vertices; // store the 3 vertices
