@@ -9,39 +9,55 @@ using namespace std;
 
 int main()
 {
-    // Window
     RenderWindow window(VideoMode(1920, 1080), "Chaos Game");
-
     srand(time(NULL));
 
-    vector<Vector2f> vertices; // store the 3 vertices
-    vector<Vector2f> points;   // fourth and random clicks
-    // Loading the font
-    Font font;
-    font.loadFromFile("Times.ttc");
+    vector<Vector2f> vertices;
+    vector<Vector2f> points;
+
+    // --- EXTRA CREDIT SHAPE SELECTION ---
+    int requiredVertices = 3; // default
+
+    cout << "Choose a shape:\n";
+    cout << "1. Triangle (3 vertices)\n";
+    cout << "2. Square   (4 vertices)\n";
+    cout << "3. Pentagon (5 vertices)\n";
+    cout << "Enter choice: ";
+
+    int choice;
+    cin >> choice;
+
+    if (choice == 2)
+        requiredVertices = 4;
+    else if (choice == 3)
+        requiredVertices = 5;
+    else
+        requiredVertices = 3;
+
+    cout << "You must click " << requiredVertices
+         << " times to set the vertices.\n";
+    cout << "Then click once more to set the starting point.\n";
 
     while (window.isOpen())
     {
         Event event;
         while (window.pollEvent(event))
         {
-            // close window
             if (event.type == Event::Closed)
                 window.close();
 
-            // mouse click
             if (event.type == Event::MouseButtonPressed &&
                 event.mouseButton.button == Mouse::Left)
             {
                 float mx = event.mouseButton.x;
                 float my = event.mouseButton.y;
 
-                // First 3 clicks → collect vertices
-                if (vertices.size() < 3)
+                // First N clicks → vertices
+                if (vertices.size() < requiredVertices)
                 {
                     vertices.push_back(Vector2f(mx, my));
                 }
-                // 4th click → starting point
+                // Next click → starting point
                 else if (points.size() == 0)
                 {
                     points.push_back(Vector2f(mx, my));
@@ -49,27 +65,17 @@ int main()
             }
         }
 
-        // Escape closes window
         if (Keyboard::isKeyPressed(Keyboard::Escape))
             window.close();
 
-        /*
-        Update - Chaos Game Logic
-        */
+        // Chaos Game Logic
         if (points.size() > 0)
         {
-            // pick random vertex index 0,1,2
-            int r = rand() % 3;
+            int r = rand() % requiredVertices;
 
-            // last generated point
             Vector2f last = points.back();
-
-            // chosen vertex
             Vector2f target = vertices[r];
 
-            // midpoint formula:
-            // newX = (lastX + vertexX) / 2
-            // newY = (lastY + vertexY) / 2
             Vector2f next(
                 (last.x + target.x) / 2.f,
                 (last.y + target.y) / 2.f
@@ -78,12 +84,10 @@ int main()
             points.push_back(next);
         }
 
-        /*
-        Drawing
-        */
+        // Drawing
         window.clear(Color::Black);
 
-        // Draw vertices as blue squares
+        // Draw vertices
         for (auto &v : vertices)
         {
             RectangleShape r(Vector2f(10, 10));
@@ -92,7 +96,7 @@ int main()
             window.draw(r);
         }
 
-        // Draw all chaos game points (white pixels)
+        // Draw points
         for (auto &p : points)
         {
             RectangleShape pixel(Vector2f(2, 2));
