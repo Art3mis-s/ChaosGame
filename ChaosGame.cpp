@@ -28,7 +28,7 @@ int main()
     infoText.setFillColor(sf::Color::White);
     infoText.setPosition(10.f, 10.f);
 
-    // sEXTRA CREDIT SHAPE SELECTION
+    // EXTRA CREDIT SHAPE SELECTION
     size_t requiredVertices = 3; // default
 
     cout << "Choose a shape:\n";
