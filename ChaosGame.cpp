@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <string>
+#include <sstream>
 
 using namespace sf;
 using namespace std;
@@ -15,8 +17,19 @@ int main()
     vector<Vector2f> vertices;
     vector<Vector2f> points;
 
-    // --- EXTRA CREDIT SHAPE SELECTION ---
-    int requiredVertices = 3; // default
+    // Load font for on-screen text
+    sf::Font font;
+    if (!font.loadFromFile("Times.ttc")) {
+        std::cerr << "Warning: failed to load Times.ttc. On-screen text will not appear.\n";
+    }
+    sf::Text infoText;
+    infoText.setFont(font);
+    infoText.setCharacterSize(18);
+    infoText.setFillColor(sf::Color::White);
+    infoText.setPosition(10.f, 10.f);
+
+    // sEXTRA CREDIT SHAPE SELECTION
+    size_t requiredVertices = 3; // default
 
     cout << "Choose a shape:\n";
     cout << "1. Triangle (3 vertices)\n";
@@ -69,9 +82,9 @@ int main()
             window.close();
 
         // Chaos Game Logic
-        if (points.size() > 0)
+        if (points.size() > 0 && !vertices.empty())
         {
-            int r = rand() % requiredVertices;
+            int r = rand() % static_cast<int>(requiredVertices);
 
             Vector2f last = points.back();
             Vector2f target = vertices[r];
@@ -103,6 +116,22 @@ int main()
             pixel.setFillColor(Color::White);
             pixel.setPosition(p);
             window.draw(pixel);
+        }
+
+        // Update and draw on-screen info panel (top-left)
+        if (font.getInfo().family.size() > 0) {
+            std::ostringstream oss;
+            std::string shapeName = "Triangle";
+            if (requiredVertices == 4) shapeName = "Square";
+            else if (requiredVertices == 5) shapeName = "Pentagon";
+
+            oss << "Shape: " << shapeName << " (" << requiredVertices << ")\n";
+            oss << "Vertices: " << vertices.size() << " / " << requiredVertices << "\n";
+            oss << "Starting point: " << (points.size() > 0 ? "set" : "not set") << "\n";
+            oss << "Left-click to add points. Press Esc to quit.";
+
+            infoText.setString(oss.str());
+            window.draw(infoText);
         }
 
         window.display();
