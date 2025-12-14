@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <cmath>
 #include <sstream>
 
 using namespace sf;
@@ -16,6 +17,10 @@ int main()
 
     vector<Vector2f> vertices;
     vector<Vector2f> points;
+    // Parallel color arrays
+    vector<sf::Color> vertexColors;
+    // track which vertex was chosen to create each point (-1 for starting point)
+    vector<int> pointOwners;
 
     // Load font for on-screen text
     sf::Font font;
@@ -57,6 +62,25 @@ int main()
     const int pointsPerFrame = 2000; // generate many points per frame for fast rendering
     bool running = true; // toggle generation with Space
     bool noRepeat = false; // when true, avoid selecting same vertex twice in a row
+    int colorMode = 1; // 0 = white, 1 = per-vertex, 2 = iteration gradient (default to per-vertex)
+
+    auto hsvToRgb = [](float h, float s, float v) {
+        // h in [0,360), s,v in [0,1]
+        float C = v * s;
+        float X = C * (1 - std::fabs(std::fmod(h / 60.0f, 2) - 1));
+        float m = v - C;
+        float r = 0, g = 0, b = 0;
+        if (h < 60) { r = C; g = X; b = 0; }
+        else if (h < 120) { r = X; g = C; b = 0; }
+        else if (h < 180) { r = 0; g = C; b = X; }
+        else if (h < 240) { r = 0; g = X; b = C; }
+        else if (h < 300) { r = X; g = 0; b = C; }
+        else { r = C; g = 0; b = X; }
+        sf::Uint8 R = static_cast<sf::Uint8>((r + m) * 255);
+        sf::Uint8 G = static_cast<sf::Uint8>((g + m) * 255);
+        sf::Uint8 B = static_cast<sf::Uint8>((b + m) * 255);
+        return sf::Color(R, G, B);
+    };
 
     while (window.isOpen())
     {
@@ -76,11 +100,16 @@ int main()
                 if (vertices.size() < requiredVertices)
                 {
                     vertices.push_back(Vector2f(mx, my));
+                    // assign a random color to this vertex
+                    sf::Color vc = sf::Color(rand()%256, rand()%256, rand()%256);
+                    vertexColors.push_back(vc);
                 }
                 // Next click → starting point
                 else if (points.size() == 0)
                 {
                     points.push_back(Vector2f(mx, my));
+                    // starting point owner
+                    pointOwners.push_back(-1);
                 }
             }
             if (event.type == Event::KeyPressed) {
@@ -92,6 +121,9 @@ int main()
                 }
                 if (event.key.code == Keyboard::R) {
                     noRepeat = !noRepeat; // toggle no-repeat rule
+                }
+                if (event.key.code == Keyboard::C) {
+                    colorMode = (colorMode + 1) % 3; // cycle color mode
                 }
             }
         }
@@ -122,6 +154,7 @@ int main()
                 );
 
                 points.push_back(next);
+                pointOwners.push_back(r);
             }
         }
 
@@ -129,20 +162,31 @@ int main()
         window.clear(Color::Black);
 
         // Draw vertices (centered markers)
-        for (auto &v : vertices)
+        for (size_t vi = 0; vi < vertices.size(); ++vi)
         {
+            auto &v = vertices[vi];
             RectangleShape r(Vector2f(10, 10));
-            r.setFillColor(Color::Blue);
+            sf::Color vc = (vi < vertexColors.size() ? vertexColors[vi] : Color::Blue);
+            r.setFillColor(vc);
             r.setOrigin(5.f, 5.f);
             r.setPosition(v);
             window.draw(r);
         }
 
-        // Draw points (small centered pixels)
-        for (auto &p : points)
+        // Draw points (small centered pixels) — color computed from owner or iteration
+        for (size_t i = 0; i < points.size(); ++i)
         {
+            auto &p = points[i];
             RectangleShape pixel(Vector2f(2, 2));
-            pixel.setFillColor(Color::White);
+            sf::Color pc = Color::White;
+            int owner = (i < pointOwners.size() ? pointOwners[i] : -1);
+            if (colorMode == 1 && owner >= 0 && owner < (int)vertexColors.size()) {
+                pc = vertexColors[owner];
+            } else if (colorMode == 2) {
+                float hue = std::fmod(static_cast<float>(i) * 0.5f, 360.0f);
+                pc = hsvToRgb(hue, 1.0f, 1.0f);
+            }
+            pixel.setFillColor(pc);
             pixel.setOrigin(1.f, 1.f);
             pixel.setPosition(p);
             window.draw(pixel);
@@ -167,7 +211,11 @@ int main()
             oss << "Shape: " << shapeName << " (" << requiredVertices << ")\n";
             oss << "Vertices: " << vertices.size() << " / " << requiredVertices << "\n";
             oss << "Starting point: " << (points.size() > 0 ? "set" : "not set") << "\n";
-            oss << "Left-click to add points. Space: pause/resume. Esc: quit.";
+            std::string colorModeName = "White";
+            if (colorMode == 1) colorModeName = "Per-vertex";
+            else if (colorMode == 2) colorModeName = "Iteration Gradient";
+
+            oss << "Left-click to add points. Space: pause/resume. C: change color (" << colorModeName << ") Esc: quit.";
 
             infoText.setString(oss.str());
             window.draw(infoText);
